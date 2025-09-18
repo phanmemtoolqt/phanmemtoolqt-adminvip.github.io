@@ -1,0 +1,455 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin - Quản Lý</title>
+    <style>
+        body { 
+            font-family: Arial, sans-serif; 
+            background-color: #0D1117; 
+            color: #E6EDF3; 
+            margin: 0; 
+            padding: 20px; 
+            display: flex; 
+            justify-content: center; 
+            align-items: flex-start; 
+            min-height: 100vh;
+        }
+        .container { 
+            width: 100%; 
+            max-width: 800px; 
+            background-color: rgba(22, 27, 34, 0.95); 
+            padding: 25px; 
+            border-radius: 8px; 
+            box-shadow: 0 2px 10px rgba(0,0,0,0.3); 
+            border: 1px solid rgba(56, 139, 253, 0.3);
+            position: relative;
+        }
+        h1, h2 { 
+            text-align: center; 
+            color: #3081F7;
+            margin-bottom: 20px;
+        }
+        input[type="password"] { 
+            width: calc(100% - 22px); 
+            padding: 10px; 
+            margin-bottom: 15px; 
+            border: 1px solid rgba(56, 139, 253, 0.3); 
+            border-radius: 6px; 
+            background-color: rgba(13, 17, 23, 0.5); 
+            color: #E6EDF3; 
+        }
+        button { 
+            padding: 10px 15px; 
+            border: none; 
+            border-radius: 6px; 
+            color: white; 
+            cursor: pointer; 
+            font-size: 16px; 
+            margin: 5px; 
+            transition: opacity 0.2s; 
+        }
+        button:hover { opacity: 0.9; }
+        .btn-login, .btn-refresh { background-color: #3081F7; width: 100%; }
+        .btn-approve { background-color: #238636; }
+        .btn-reject { background-color: #fa3e3e; }
+        .btn-delete { background-color: #DA3633; }
+        .btn-reset-balance { background-color: #ff9900; }
+        #status-message { 
+            text-align: center; 
+            padding: 10px; 
+            margin: 15px 0; 
+            border-radius: 6px; 
+            display: none; 
+        }
+        .status-success { background-color: rgba(35, 134, 54, 0.3); color: #42b72a; }
+        .status-error { background-color: rgba(250, 62, 62, 0.3); color: #fa3e3e; }
+        .status-loading { background-color: rgba(48, 129, 247, 0.3); color: #3081F7; }
+        table { 
+            width: 100%; 
+            border-collapse: collapse; 
+            margin-top: 20px; 
+        }
+        th, td { 
+            border: 1px solid rgba(56, 139, 253, 0.3); 
+            padding: 12px; 
+            text-align: left; 
+            vertical-align: middle; 
+            word-break: break-all;
+        }
+        th { 
+            background-color: rgba(56, 139, 253, 0.1); 
+            color: #3081F7; 
+            font-weight: bold; 
+        }
+        .actions-cell { text-align: center; }
+        .menu-btn {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            background: none;
+            border: none;
+            color: #E6EDF3;
+            font-size: 24px;
+            cursor: pointer;
+            z-index: 10;
+        }
+        .menu-options {
+            display: none;
+            position: absolute;
+            top: 50px;
+            right: 20px;
+            background-color: #161B22;
+            border: 1px solid #3081F7;
+            border-radius: 8px;
+            padding: 10px;
+            z-index: 9;
+        }
+        .menu-options button {
+            display: block;
+            width: 100%;
+            text-align: left;
+            margin: 5px 0;
+            background: none;
+            border: none;
+            color: #E6EDF3;
+            padding: 10px;
+            transition: background-color 0.2s;
+        }
+        .menu-options button:hover {
+            background-color: rgba(48, 129, 247, 0.2);
+        }
+        .status-active { color: #238636; }
+        .status-inactive { color: #DA3633; }
+        @media (max-width: 600px) { 
+            th, td { padding: 8px; } 
+            button { width: calc(100% - 10px); } 
+        }
+    </style>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore-compat.js"></script>
+</head>
+<body>
+
+    <div class="container">
+        <div id="login-screen">
+            <h1>🔒 Admin Login</h1>
+            <input type="password" id="admin-password" placeholder="Nhập mật khẩu admin...">
+            <button onclick="login()" class="btn-login">Đăng Nhập</button>
+        </div>
+
+        <div id="admin-panel" style="display:none;">
+            <button class="menu-btn" onclick="toggleMenu()">☰</button>
+            <div id="menu-options" class="menu-options">
+                <button onclick="showPanel('deposits')">Duyệt Nạp Tiền</button>
+                <button onclick="showPanel('users')">Quản Lý Người Dùng</button>
+            </div>
+
+            <div id="deposits-panel">
+                <h2>Bảng Chờ Duyệt Nạp Tiền</h2>
+                <button onclick="fetchPendingDeposits()" class="btn-refresh">🔄 Tải Lại Danh Sách</button>
+                <div id="status-message-deposits"></div>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Thời gian</th>
+                            <th>Mã GD</th>
+                            <th>Username</th>
+                            <th>Số Tiền</th>
+                            <th class="actions-cell">Hành Động</th>
+                        </tr>
+                    </thead>
+                    <tbody id="deposits-body"></tbody>
+                </table>
+            </div>
+
+            <div id="users-panel" style="display:none;">
+                <h2>Quản Lý Người Dùng</h2>
+                <button onclick="fetchUsers()" class="btn-refresh">🔄 Tải Lại Danh Sách</button>
+                <div id="status-message-users"></div>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Username</th>
+                            <th>Trạng thái</th>
+                            <th>Hạn dùng</th>
+                            <th>Số dư</th>
+                            <th class="actions-cell">Hành động</th>
+                        </tr>
+                    </thead>
+                    <tbody id="users-body"></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+<script>
+    const firebaseConfig = {
+        apiKey: "AIzaSyAXtM_AHMeg76S0VaxQTJ_e68qKg0KxKRk",
+        authDomain: "ma-my-7cb60.firebaseapp.com",
+        projectId: "ma-my-7cb60",
+        storageBucket: "ma-my-7cb60.firebasestorage.app",
+        messagingSenderId: "139387264637",
+        appId: "1:139387264637:web:5c296efe7d3bb97a2a5b14",
+        measurementId: "G-E6RHBS10QV"
+    };
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.firestore();
+    
+    const ADMIN_PASSWORD = "deocotrinh";
+
+    const loginScreen = document.getElementById('login-screen');
+    const adminPanel = document.getElementById('admin-panel');
+    const depositsPanel = document.getElementById('deposits-panel');
+    const usersPanel = document.getElementById('users-panel');
+    const passwordInput = document.getElementById('admin-password');
+    const depositsBody = document.getElementById('deposits-body');
+    const usersBody = document.getElementById('users-body');
+    const menuOptions = document.getElementById('menu-options');
+
+    function showStatus(panel, message, type = 'loading') {
+        const statusMessage = document.getElementById(`status-message-${panel}`);
+        statusMessage.textContent = message;
+        statusMessage.className = `status-${type}`;
+        statusMessage.style.display = 'block';
+    }
+
+    function hideStatus(panel) {
+        document.getElementById(`status-message-${panel}`).style.display = 'none';
+    }
+
+    function toggleMenu() {
+        menuOptions.style.display = menuOptions.style.display === 'block' ? 'none' : 'block';
+    }
+
+    function showPanel(panelName) {
+        depositsPanel.style.display = 'none';
+        usersPanel.style.display = 'none';
+        
+        document.getElementById(`${panelName}-panel`).style.display = 'block';
+        toggleMenu();
+        if (panelName === 'deposits') {
+            fetchPendingDeposits();
+        } else {
+            fetchUsers();
+        }
+    }
+
+    function login() {
+        if (passwordInput.value === ADMIN_PASSWORD) {
+            loginScreen.style.display = 'none';
+            adminPanel.style.display = 'block';
+            showPanel('deposits');
+        } else {
+            Swal.fire({ title: 'Lỗi', text: 'Mật khẩu không chính xác!', icon: 'error' });
+        }
+    }
+
+    async function fetchPendingDeposits() {
+        showStatus('deposits', 'Đang tải danh sách...', 'loading');
+        depositsBody.innerHTML = '';
+        try {
+            const snapshot = await db.collection('deposit_requests')
+                .where('status', '==', 'pending')
+                .orderBy('timestamp', 'asc')
+                .get();
+            const deposits = [];
+            snapshot.forEach(doc => {
+                const data = doc.data();
+                deposits.push({
+                    id: doc.id,
+                    timestamp: data.timestamp ? data.timestamp.toDate().toLocaleString('vi-VN') : 'N/A',
+                    transactionId: data.transactionId,
+                    username: data.username,
+                    amount: data.amount.toLocaleString('vi-VN') + ' VNĐ'
+                });
+            });
+            if (deposits.length === 0) {
+                showStatus('deposits', '✅ Không có yêu cầu nào đang chờ duyệt.', 'success');
+            } else {
+                hideStatus('deposits');
+                renderDeposits(deposits);
+            }
+        } catch (error) {
+            showStatus('deposits', `Lỗi tải dữ liệu: ${error.message}`, 'error');
+        }
+    }
+
+    function renderDeposits(deposits) {
+        depositsBody.innerHTML = '';
+        deposits.forEach(deposit => {
+            const row = document.createElement('tr');
+            row.innerHTML = `
+                <td>${deposit.timestamp}</td>
+                <td>${deposit.transactionId}</td>
+                <td>${deposit.username}</td>
+                <td>${deposit.amount}</td>
+                <td class="actions-cell">
+                    <button class="btn-approve" onclick="processDeposit('${deposit.id}', 'approve')">Duyệt</button>
+                    <button class="btn-reject" onclick="processDeposit('${deposit.id}', 'reject')">Từ chối</button>
+                </td>
+            `;
+            depositsBody.appendChild(row);
+        });
+    }
+
+    async function processDeposit(docId, type) {
+        const result = await Swal.fire({
+            title: `Xác nhận ${type === 'approve' ? 'Duyệt' : 'Từ chối'}`,
+            text: `Bạn chắc chắn muốn ${type === 'approve' ? 'duyệt' : 'từ chối'} giao dịch này?`,
+            icon: 'question',
+            showCancelButton: true,
+            confirmButtonText: 'Đồng ý',
+            cancelButtonText: 'Hủy',
+            background: '#161B22', color: '#E6EDF3',
+            confirmButtonColor: type === 'approve' ? '#238636' : '#fa3e3e',
+        });
+        if (!result.isConfirmed) return;
+        showStatus('deposits', `Đang xử lý giao dịch...`, 'loading');
+        try {
+            const depositRef = db.collection('deposit_requests').doc(docId);
+            const depositDoc = await depositRef.get();
+            const depositData = depositDoc.data();
+            if (type === 'approve') {
+                const userRef = db.collection('users').doc(depositData.username);
+                await db.runTransaction(async (t) => {
+                    const userDoc = await t.get(userRef);
+                    if (!userDoc.exists) { throw new Error("Không tìm thấy người dùng."); }
+                    const newBalance = (userDoc.data().balance || 0) + depositData.amount;
+                    t.update(userRef, { balance: newBalance });
+                    t.update(depositRef, { 
+                        status: 'completed',
+                        processedAt: firebase.firestore.FieldValue.serverTimestamp()
+                    });
+                });
+                showStatus('deposits', `✅ Đã duyệt và cộng tiền thành công cho ${depositData.username}!`, 'success');
+            } else { 
+                await depositRef.update({
+                    status: 'rejected',
+                    processedAt: firebase.firestore.FieldValue.serverTimestamp()
+                });
+                showStatus('deposits', `❌ Đã từ chối giao dịch ${depositData.transactionId}.`, 'error');
+            }
+            setTimeout(fetchPendingDeposits, 1500); 
+        } catch (error) {
+            showStatus('deposits', `Lỗi xử lý: ${error.message}`, 'error');
+        }
+    }
+    
+    // =================================================================
+    // Chức năng Quản lý người dùng
+    // =================================================================
+
+    async function fetchUsers() {
+        showStatus('users', 'Đang tải danh sách người dùng...', 'loading');
+        usersBody.innerHTML = '';
+        try {
+            const snapshot = await db.collection('users').get();
+            const users = [];
+            snapshot.forEach(doc => {
+                const data = doc.data();
+                const expiryDate = data.expiryDate ? new Date(data.expiryDate.seconds * 1000).toLocaleString('vi-VN') : 'N/A';
+                users.push({
+                    id: doc.id,
+                    username: data.username,
+                    isActive: data.isActive,
+                    expiryDate: expiryDate,
+                    balance: data.balance || 0
+                });
+            });
+            if (users.length === 0) {
+                showStatus('users', '✅ Không có người dùng nào.', 'success');
+            } else {
+                hideStatus('users');
+                renderUsers(users);
+            }
+        } catch (error) {
+            showStatus('users', `Lỗi tải dữ liệu: ${error.message}`, 'error');
+        }
+    }
+
+    function renderUsers(users) {
+        usersBody.innerHTML = '';
+        users.forEach(user => {
+            const statusText = user.isActive ? 'Đã kích hoạt' : 'Chưa kích hoạt';
+            const statusClass = user.isActive ? 'status-active' : 'status-inactive';
+            const row = document.createElement('tr');
+            row.innerHTML = `
+                <td>${user.username}</td>
+                <td><span class="${statusClass}">${statusText}</span></td>
+                <td>${user.expiryDate}</td>
+                <td>${user.balance.toLocaleString('vi-VN')} VNĐ</td>
+                <td class="actions-cell">
+                    <button class="btn-delete" onclick="deleteUser('${user.id}')">Xóa tài khoản</button>
+                    <button class="btn-reset-balance" onclick="resetUserBalance('${user.id}')">Sửa số dư</button>
+                </td>
+            `;
+            usersBody.appendChild(row);
+        });
+    }
+
+    async function deleteUser(userId) {
+        const result = await Swal.fire({
+            title: 'Xác nhận xóa tài khoản',
+            text: 'Thao tác này sẽ xóa vĩnh viễn tài khoản này. Bạn có chắc chắn không?',
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonText: 'Đồng ý',
+            cancelButtonText: 'Hủy',
+            background: '#161B22', color: '#E6EDF3',
+            confirmButtonColor: '#DA3633',
+        });
+        if (!result.isConfirmed) return;
+        showStatus('users', `Đang xóa tài khoản...`, 'loading');
+        try {
+            await db.collection('users').doc(userId).delete();
+            showStatus('users', `✅ Đã xóa tài khoản thành công!`, 'success');
+            setTimeout(fetchUsers, 1500);
+        } catch (error) {
+            showStatus('users', `Lỗi xử lý: ${error.message}`, 'error');
+        }
+    }
+
+    async function resetUserBalance(userId) {
+        const { value: newBalance } = await Swal.fire({
+            title: 'Nhập số dư mới',
+            input: 'text',
+            inputLabel: 'Số dư (VNĐ)',
+            inputValue: '0',
+            showCancelButton: true,
+            confirmButtonText: 'Cập nhật',
+            cancelButtonText: 'Hủy',
+            background: '#161B22', color: '#E6EDF3',
+            confirmButtonColor: '#ff9900',
+            inputValidator: (value) => {
+                if (!value || isNaN(value)) {
+                    return 'Vui lòng nhập một số hợp lệ!';
+                }
+            }
+        });
+
+        if (newBalance === undefined) return;
+        showStatus('users', `Đang cập nhật số dư...`, 'loading');
+        try {
+            const userRef = db.collection('users').doc(userId);
+            await userRef.update({
+                balance: parseInt(newBalance)
+            });
+            showStatus('users', `✅ Đã cập nhật số dư thành công!`, 'success');
+            setTimeout(fetchUsers, 1500);
+        } catch (error) {
+            showStatus('users', `Lỗi xử lý: ${error.message}`, 'error');
+        }
+    }
+
+    passwordInput.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') {
+            login();
+        }
+    });
+</script>
+
+</body>
+</html>
