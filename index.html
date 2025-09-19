@@ -211,7 +211,7 @@
 
     function showStatus(panel, message, type = 'loading') {
         const statusMessage = document.getElementById(`status-message-${panel}`);
-        statusMessage.textContent = message;
+        statusMessage.textContent = message; // ✅ fix XSS
         statusMessage.className = `status-${type}`;
         statusMessage.style.display = 'block';
     }
@@ -281,16 +281,28 @@
         depositsBody.innerHTML = '';
         deposits.forEach(deposit => {
             const row = document.createElement('tr');
-            row.innerHTML = `
-                <td>${deposit.timestamp}</td>
-                <td>${deposit.transactionId}</td>
-                <td>${deposit.username}</td>
-                <td>${deposit.amount}</td>
-                <td class="actions-cell">
-                    <button class="btn-approve" onclick="processDeposit('${deposit.id}', 'approve')">Duyệt</button>
-                    <button class="btn-reject" onclick="processDeposit('${deposit.id}', 'reject')">Từ chối</button>
-                </td>
+
+            const td1 = document.createElement('td');
+            td1.textContent = deposit.timestamp;
+            const td2 = document.createElement('td');
+            td2.textContent = deposit.transactionId;
+            const td3 = document.createElement('td');
+            td3.textContent = deposit.username;
+            const td4 = document.createElement('td');
+            td4.textContent = deposit.amount;
+            const td5 = document.createElement('td');
+            td5.className = 'actions-cell';
+            td5.innerHTML = `
+                <button class="btn-approve" onclick="processDeposit('${deposit.id}', 'approve')">Duyệt</button>
+                <button class="btn-reject" onclick="processDeposit('${deposit.id}', 'reject')">Từ chối</button>
             `;
+
+            row.appendChild(td1);
+            row.appendChild(td2);
+            row.appendChild(td3);
+            row.appendChild(td4);
+            row.appendChild(td5);
+
             depositsBody.appendChild(row);
         });
     }
@@ -373,19 +385,32 @@
     function renderUsers(users) {
         usersBody.innerHTML = '';
         users.forEach(user => {
-            const statusText = user.isActive ? 'Đã kích hoạt' : 'Chưa kích hoạt';
-            const statusClass = user.isActive ? 'status-active' : 'status-inactive';
             const row = document.createElement('tr');
-            row.innerHTML = `
-                <td>${user.username}</td>
-                <td><span class="${statusClass}">${statusText}</span></td>
-                <td>${user.expiryDate}</td>
-                <td>${user.balance.toLocaleString('vi-VN')} VNĐ</td>
-                <td class="actions-cell">
-                    <button class="btn-deactivate" onclick="deactivateUserKey('${user.id}')">Vô hiệu hóa Key</button>
-                    <button class="btn-reset-balance" onclick="resetUserBalance('${user.id}')">Sửa số dư</button>
-                </td>
+
+            const td1 = document.createElement('td');
+            td1.textContent = user.username;
+            const td2 = document.createElement('td');
+            const span = document.createElement('span');
+            span.className = user.isActive ? 'status-active' : 'status-inactive';
+            span.textContent = user.isActive ? 'Đã kích hoạt' : 'Chưa kích hoạt';
+            td2.appendChild(span);
+            const td3 = document.createElement('td');
+            td3.textContent = user.expiryDate;
+            const td4 = document.createElement('td');
+            td4.textContent = user.balance.toLocaleString('vi-VN') + ' VNĐ';
+            const td5 = document.createElement('td');
+            td5.className = 'actions-cell';
+            td5.innerHTML = `
+                <button class="btn-deactivate" onclick="deactivateUserKey('${user.id}')">Vô hiệu hóa Key</button>
+                <button class="btn-reset-balance" onclick="resetUserBalance('${user.id}')">Sửa số dư</button>
             `;
+
+            row.appendChild(td1);
+            row.appendChild(td2);
+            row.appendChild(td3);
+            row.appendChild(td4);
+            row.appendChild(td5);
+
             usersBody.appendChild(row);
         });
     }
@@ -404,57 +429,4 @@
         if (!result.isConfirmed) return;
         showStatus('users', `Đang vô hiệu hóa key...`, 'loading');
         try {
-            const userRef = db.collection('users').doc(userId);
-            await userRef.update({
-                isActive: false,
-                expiryDate: null
-            });
-            showStatus('users', `✅ Đã vô hiệu hóa key thành công!`, 'success');
-            setTimeout(fetchUsers, 1500);
-        } catch (error) {
-            showStatus('users', `Lỗi xử lý: ${error.message}`, 'error');
-        }
-    }
-
-    async function resetUserBalance(userId) {
-        const { value: newBalance } = await Swal.fire({
-            title: 'Nhập số dư mới',
-            input: 'text',
-            inputLabel: 'Số dư (VNĐ)',
-            inputValue: '0',
-            showCancelButton: true,
-            confirmButtonText: 'Cập nhật',
-            cancelButtonText: 'Hủy',
-            background: '#161B22', color: '#E6EDF3',
-            confirmButtonColor: '#ff9900',
-            inputValidator: (value) => {
-                if (!value || isNaN(value)) {
-                    return 'Vui lòng nhập một số hợp lệ!';
-                }
-            }
-        });
-
-        if (newBalance === undefined) return;
-        showStatus('users', `Đang cập nhật số dư...`, 'loading');
-        try {
-            const userRef = db.collection('users').doc(userId);
-            await userRef.update({
-                balance: parseInt(newBalance)
-            });
-            showStatus('users', `✅ Đã cập nhật số dư thành công!`, 'success');
-            setTimeout(fetchUsers, 1500);
-        } catch (error) {
-            showStatus('users', `Lỗi xử lý: ${error.message}`, 'error');
-        }
-    }
-
-    passwordInput.addEventListener('keydown', (e) => {
-        if (e.key === 'Enter') {
-            login();
-        }
-    });
-</script>
-
-</body>
-</html>
-
+            const user
