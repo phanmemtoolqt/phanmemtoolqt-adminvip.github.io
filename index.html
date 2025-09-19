@@ -430,3 +430,102 @@
         showStatus('users', `Đang vô hiệu hóa key...`, 'loading');
         try {
             const user
+            <script>
+// =================== FIREBASE CONFIG ===================
+const firebaseConfig = {
+    apiKey: "AIzaSyXXXX",
+    authDomain: "your-app.firebaseapp.com",
+    projectId: "your-app",
+    storageBucket: "your-app.appspot.com",
+    messagingSenderId: "123456789",
+    appId: "1:123456789:web:abcdef123456"
+};
+firebase.initializeApp(firebaseConfig);
+const db = firebase.firestore();
+
+// =================== RENDER USERS ===================
+function renderUsers(users) {
+    usersBody.innerHTML = '';
+    users.forEach(user => {
+        const row = document.createElement('tr');
+
+        // username
+        const tdName = document.createElement('td');
+        tdName.textContent = user.username;
+
+        // status
+        const tdStatus = document.createElement('td');
+        const span = document.createElement('span');
+        span.className = user.isActive ? 'status-active' : 'status-inactive';
+        span.textContent = user.isActive ? 'Đã kích hoạt' : 'Chưa kích hoạt';
+        tdStatus.appendChild(span);
+
+        // expiry
+        const tdExpiry = document.createElement('td');
+        tdExpiry.textContent = user.expiryDate;
+
+        // balance
+        const tdBalance = document.createElement('td');
+        tdBalance.textContent = user.balance.toLocaleString('vi-VN') + ' VNĐ';
+
+        // actions
+        const tdActions = document.createElement('td');
+        tdActions.className = 'actions-cell';
+        tdActions.innerHTML = `
+            <button class="btn-deactivate" onclick="deactivateUserKey('${user.id}')">Vô hiệu hóa Key</button>
+            <button class="btn-reset-balance" onclick="resetUserBalance('${user.id}')">Sửa số dư</button>
+        `;
+
+        row.appendChild(tdName);
+        row.appendChild(tdStatus);
+        row.appendChild(tdExpiry);
+        row.appendChild(tdBalance);
+        row.appendChild(tdActions);
+
+        usersBody.appendChild(row);
+    });
+}
+
+// =================== RENDER DEPOSITS ===================
+function renderDeposits(deposits) {
+    depositsBody.innerHTML = '';
+    deposits.forEach(deposit => {
+        const row = document.createElement('tr');
+
+        const tdTime = document.createElement('td');
+        tdTime.textContent = deposit.timestamp;
+
+        const tdId = document.createElement('td');
+        tdId.textContent = deposit.transactionId;
+
+        const tdUser = document.createElement('td');
+        tdUser.textContent = deposit.username;
+
+        const tdAmount = document.createElement('td');
+        tdAmount.textContent = deposit.amount;
+
+        const tdStatus = document.createElement('td');
+        tdStatus.className = 'status-cell';
+        const btnApprove = document.createElement('button');
+        btnApprove.className = 'btn-approve';
+        btnApprove.textContent = 'Duyệt';
+        btnApprove.onclick = () => approveDeposit(deposit.id);
+
+        const btnReject = document.createElement('button');
+        btnReject.className = 'btn-reject';
+        btnReject.textContent = 'Hủy';
+        btnReject.onclick = () => rejectDeposit(deposit.id);
+
+        tdStatus.appendChild(btnApprove);
+        tdStatus.appendChild(btnReject);
+
+        row.appendChild(tdTime);
+        row.appendChild(tdId);
+        row.appendChild(tdUser);
+        row.appendChild(tdAmount);
+        row.appendChild(tdStatus);
+
+        depositsBody.appendChild(row);
+    });
+}
+</script>
